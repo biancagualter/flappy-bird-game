@@ -1,3 +1,6 @@
+const hitSound = new Audio()
+hitSound.src = './effects/hit.wav'
+
 const sprites = new Image()
 sprites.src = './sprites.png'
 
@@ -59,42 +62,140 @@ const floor = {
     }
 }
 
-const bird = {
-    sX: 0,
-    sY: 0,
-    width: 33,
-    height: 24,
-    x: 10,
-    y: 50,
-    gravity: 0.25,
-    velocity: 0,
+function collision(bird,floor) {
+    const birdY = bird.y + bird.height
+    const floorY = floor.y
 
-    refresh() {
-        bird.velocity = bird.velocity + bird.gravity
-        bird.y = bird.y + bird.velocity
-    },
+    if(birdY >= floorY){
+        return true
+    } 
+
+    return false
+}
+
+function createBird() {
+    const bird = {
+        sX: 0,
+        sY: 0,
+        width: 33,
+        height: 24,
+        x: 10,
+        y: 50,
+        jumpSize: 4.6,
+        jump() {
+            bird.velocity = - bird.jumpSize
+        },
+        gravity: 0.25,
+        velocity: 0,
+    
+        refresh() {
+            if(collision(bird, floor)){
+                console.log('Fez colisão')
+                hitSound.play()
+
+                setTimeout(() => {
+                    changeScreen(screens.start)
+                }, 500)
+
+                
+                return 
+            }
+            bird.velocity = bird.velocity + bird.gravity
+            bird.y = bird.y + bird.velocity
+        },
+        draw() {
+            ctx.drawImage(
+                sprites,
+                bird.sX, bird.sY,
+                bird.width, bird.height,
+                bird.x, bird.y,
+                bird.width, bird.height,
+            )    
+        }
+    }
+    return bird
+}
+
+
+const msgGetReady = {
+    sX: 134,
+    sY: 0,
+    width: 174,
+    height: 152,
+    x: (canvas.width / 2) - 174 / 2,
+    y: 50,
     draw() {
         ctx.drawImage(
             sprites,
-            bird.sX, bird.sY,
-            bird.width, bird.height,
-            bird.x, bird.y,
-            bird.width, bird.height,
-        )    
+            msgGetReady.sX, msgGetReady.sY,
+            msgGetReady.width, msgGetReady.height,
+            msgGetReady.x, msgGetReady.y,
+            msgGetReady.width, msgGetReady.height,
+        )
     }
 }
 
-function loop() {
-    bird.refresh()
+const global = {}
+let activeScreen = {}
+function changeScreen(newScreen) {
+    activeScreen = newScreen
 
-    background.draw()
-    floor.draw()
-    bird.draw()
-    
-    
+    initialize = screens.start.initialize
+
+    if(activeScreen.initialize){
+         initialize()
+    }
+}
+
+const screens = {
+
+    start: {
+        initialize() {
+            global.bird = createBird()
+        },
+        draw() {
+            background.draw()
+            floor.draw()
+            global.bird.draw()
+            msgGetReady.draw()
+        },
+        click(){
+            changeScreen(screens.game)
+        },
+        refresh() {
+
+        }
+    }
+}
+
+screens.game = {
+    draw() {
+        background.draw()
+        floor.draw()
+        global.bird.draw()
+    },
+    click() {
+        global.bird.jump()
+    },
+    refresh() {
+        global.bird.refresh()
+    },
+}
+
+function loop() {
+
+    activeScreen.draw()
+    activeScreen.refresh()
 
     requestAnimationFrame(loop)
 
 }
 
+window.addEventListener('click', function(){
+    if(activeScreen.click){
+        activeScreen.click()
+    }
+})
+
+changeScreen(screens.start)
 loop()
