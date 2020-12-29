@@ -103,12 +103,9 @@ function createBird() {
     
         refresh() {
             if(collision(bird, global.floor)){
-                console.log('Fez colisão')
                 hitSound.play()
 
-                setTimeout(() => {
-                    changeScreen(screens.start)
-                }, 500)
+                changeScreen(screens.gameOver)
 
                 return 
             }
@@ -124,7 +121,7 @@ function createBird() {
         currentFrame: 0,
         refreshCurrentFrame() {
             const frameInterval = 10
-            const exceededInterval = frames % frameInterval === 1
+            const exceededInterval = frames % frameInterval === 0
 
             if(exceededInterval) {
                 const incrementBase = 1;
@@ -202,8 +199,7 @@ function createPipes() {
             const headBird = global.bird.y
             const footBird = global.bird.y + global.bird.height
 
-            if(global.bird.x >= pair.x) {
-                console.log('canos')
+            if((global.bird.x + global.bird.width) >= pair.x) {
                 
                 if(headBird <= pair.pipeSky.y) {
                     return true
@@ -231,7 +227,8 @@ function createPipes() {
                 pair.x = pair.x -2
 
                 if(pipes.collisionWithBird(pair)) {
-                    changeScreen(screens.start)
+                    hitSound.play()
+                    changeScreen(screens.gameOver)
                 }
 
                 if(pair.x + pipes.width <= 0) {
@@ -243,6 +240,28 @@ function createPipes() {
     }
 
     return pipes
+}
+
+function createScoreboard() {
+    const scoreboard = {
+        score: 0,
+        draw() {
+            ctx.font = '35px "VT323"'
+            ctx.textAlign = 'right'
+            ctx.fillStyle = 'white'
+            ctx.fillText(` ${scoreboard.score}`, canvas.width - 10 , 35)
+            
+        },
+        refresh() {
+            const frameInterval = 20
+            const exceededInterval = frames % frameInterval === 0
+
+            if(exceededInterval) {
+                scoreboard.score = scoreboard.score + 1
+            }
+        }
+    }
+    return scoreboard
 }
 
 const msgGetReady = {
@@ -259,6 +278,24 @@ const msgGetReady = {
             msgGetReady.width, msgGetReady.height,
             msgGetReady.x, msgGetReady.y,
             msgGetReady.width, msgGetReady.height,
+        )
+    }
+}
+
+const msgGameOver = {
+    sX: 134,
+    sY: 153,
+    width: 226,
+    height: 200,
+    x: (canvas.width / 2) - 226 / 2,
+    y: 50,
+    draw() {
+        ctx.drawImage(
+            sprites,
+            msgGameOver.sX, msgGameOver.sY,
+            msgGameOver.width, msgGameOver.height,
+            msgGameOver.x, msgGameOver.y,
+            msgGameOver.width, msgGameOver.height,
         )
     }
 }
@@ -297,12 +334,15 @@ const screens = {
 }
 
 screens.game = {
+    initialize(){
+        global.scoreboard = createScoreboard()
+    },
     draw() {
         background.draw()
         global.pipes.draw()
         global.floor.draw()
         global.bird.draw()
-        
+        global.scoreboard.draw()
     },
     click() {
         global.bird.jump()
@@ -311,7 +351,20 @@ screens.game = {
         global.pipes.refresh()
         global.floor.refresh()
         global.bird.refresh()
+        global.scoreboard.refresh()
     },
+}
+
+screens.gameOver = {
+    draw() {
+        msgGameOver.draw()
+    },
+    refresh() {
+
+    },
+    click() {
+        changeScreen(screens.start)
+    }
 }
 
 function loop() {
