@@ -1,3 +1,4 @@
+let frames = 0
 const hitSound = new Audio()
 hitSound.src = './effects/hit.wav'
 
@@ -36,31 +37,43 @@ const background = {
     }
 }
 
-const floor = {
-    sX: 0,
-    sY: 610,
-    width: 224,
-    height: 112,
-    x: 0,
-    y: canvas.height - 112,
-    draw() {
-        ctx.drawImage(
-            sprites,
-            floor.sX, floor.sY,
-            floor.width, floor.height,
-            floor.x, floor.y,
-            floor.width, floor.height,
-        )
+function createFloor() {
+    const floor = {
+        sX: 0,
+        sY: 610,
+        width: 224,
+        height: 112,
+        x: 0,
+        y: canvas.height - 112,
+        refresh() {
+            const floorMovement = 1
+            const repeat = floor.width / 2
 
-        ctx.drawImage(
-            sprites,
-            floor.sX, floor.sY,
-            floor.width, floor.height,
-            (floor.x + floor.width), floor.y,
-            floor.width, floor.height,
-        )
+            movement = floor.x - floorMovement
+
+            floor.x = movement % repeat
+        },
+        draw() {
+            ctx.drawImage(
+                sprites,
+                floor.sX, floor.sY,
+                floor.width, floor.height,
+                floor.x, floor.y,
+                floor.width, floor.height,
+            )
+    
+            ctx.drawImage(
+                sprites,
+                floor.sX, floor.sY,
+                floor.width, floor.height,
+                (floor.x + floor.width), floor.y,
+                floor.width, floor.height,
+            )
+        }
     }
+    return floor
 }
+
 
 function collision(bird,floor) {
     const birdY = bird.y + bird.height
@@ -89,7 +102,7 @@ function createBird() {
         velocity: 0,
     
         refresh() {
-            if(collision(bird, floor)){
+            if(collision(bird, global.floor)){
                 console.log('Fez colisão')
                 hitSound.play()
 
@@ -97,16 +110,35 @@ function createBird() {
                     changeScreen(screens.start)
                 }, 500)
 
-                
                 return 
             }
             bird.velocity = bird.velocity + bird.gravity
             bird.y = bird.y + bird.velocity
         },
+        movements: [
+            {sX: 0, sY: 0, },
+            {sX: 0, sY: 26, },
+            {sX: 0, sY: 52, },
+
+        ],
+        currentFrame: 0,
+        refreshCurrentFrame() {
+            const frameInterval = 10
+            const exceededInterval = frames % frameInterval === 1
+
+            if(exceededInterval) {
+                const incrementBase = 1;
+                const increment = incrementBase + bird.currentFrame
+                const repetitionBase = bird.movements.length
+                bird.currentFrame = increment % repetitionBase
+            }
+        },
         draw() {
+            bird.refreshCurrentFrame()
+            const { sX, sY } = bird.movements[bird.currentFrame]
             ctx.drawImage(
                 sprites,
-                bird.sX, bird.sY,
+                sX, sY,
                 bird.width, bird.height,
                 bird.x, bird.y,
                 bird.width, bird.height,
@@ -152,10 +184,11 @@ const screens = {
     start: {
         initialize() {
             global.bird = createBird()
+            global.floor = createFloor()
         },
         draw() {
             background.draw()
-            floor.draw()
+            global.floor.draw()
             global.bird.draw()
             msgGetReady.draw()
         },
@@ -163,7 +196,7 @@ const screens = {
             changeScreen(screens.game)
         },
         refresh() {
-
+            global.floor.refresh()
         }
     }
 }
@@ -171,7 +204,7 @@ const screens = {
 screens.game = {
     draw() {
         background.draw()
-        floor.draw()
+        global.floor.draw()
         global.bird.draw()
     },
     click() {
@@ -187,6 +220,7 @@ function loop() {
     activeScreen.draw()
     activeScreen.refresh()
 
+    frames++
     requestAnimationFrame(loop)
 
 }
