@@ -148,6 +148,102 @@ function createBird() {
     return bird
 }
 
+function createPipes() {
+    const pipes = {
+        width: 52,
+        height: 400,
+        floor: {
+            sX: 0,
+            sY: 169
+        },
+        sky: {
+            sX: 52,
+            sY: 169,
+        },
+        space: 80,
+        draw() {
+            pipes.pairs.forEach(pair => {
+                const yRandom = pair.y
+                const pipeSpacing = 90
+
+                const pipeSkyX = pair.x
+                const pipeSkyY = yRandom
+
+                ctx.drawImage(
+                    sprites,
+                    pipes.sky.sX, pipes.sky.sY,
+                    pipes.width, pipes.height,
+                    pipeSkyX, pipeSkyY,
+                    pipes.width, pipes.height,
+                )
+    
+                const pipeFloorX = pair.x
+                const pipeFloorY = pipes.height + pipeSpacing + yRandom
+                ctx.drawImage(
+                    sprites,
+                    pipes.floor.sX, pipes.floor.sY,
+                    pipes.width, pipes.height,
+                    pipeFloorX, pipeFloorY,
+                    pipes.width, pipes.height,
+                )
+
+                pair.pipeSky = {
+                    x: pipeFloorX,
+                    y: pipes.height + pipeSkyY
+                }
+                pair.pipeFloor = {
+                    x: pipeFloorX,
+                    y: pipeFloorY,
+                }
+            })
+        },
+
+        collisionWithBird(pair) {
+            const headBird = global.bird.y
+            const footBird = global.bird.y + global.bird.height
+
+            if(global.bird.x >= pair.x) {
+                console.log('canos')
+                
+                if(headBird <= pair.pipeSky.y) {
+                    return true
+                }
+
+                if(footBird >= pair.pipeFloor.y) {
+                    return true
+                }
+            }
+
+            return false
+        },
+
+        pairs: [],
+        refresh() {
+            const exceeded100Frames = frames % 100 === 0
+            if(exceeded100Frames) {
+                pipes.pairs.push({
+                        x: canvas.width,
+                        y: -150 * (Math.random() + 1),
+                    })
+            }
+
+            pipes.pairs.forEach(pair => {
+                pair.x = pair.x -2
+
+                if(pipes.collisionWithBird(pair)) {
+                    changeScreen(screens.start)
+                }
+
+                if(pair.x + pipes.width <= 0) {
+                    pipes.pairs.shift()
+                }
+            })
+
+        }
+    }
+
+    return pipes
+}
 
 const msgGetReady = {
     sX: 134,
@@ -172,10 +268,8 @@ let activeScreen = {}
 function changeScreen(newScreen) {
     activeScreen = newScreen
 
-    initialize = screens.start.initialize
-
     if(activeScreen.initialize){
-         initialize()
+         activeScreen.initialize()
     }
 }
 
@@ -185,11 +279,12 @@ const screens = {
         initialize() {
             global.bird = createBird()
             global.floor = createFloor()
+            global.pipes = createPipes()
         },
         draw() {
             background.draw()
-            global.floor.draw()
             global.bird.draw()
+            global.floor.draw()
             msgGetReady.draw()
         },
         click(){
@@ -204,13 +299,17 @@ const screens = {
 screens.game = {
     draw() {
         background.draw()
+        global.pipes.draw()
         global.floor.draw()
         global.bird.draw()
+        
     },
     click() {
         global.bird.jump()
     },
     refresh() {
+        global.pipes.refresh()
+        global.floor.refresh()
         global.bird.refresh()
     },
 }
